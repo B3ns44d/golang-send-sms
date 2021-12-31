@@ -12,6 +12,7 @@ import (
 
 type Sms struct {
 	Body string `json:"body"`
+	To   string `json:"to"`
 }
 
 func main() {
@@ -21,8 +22,7 @@ func main() {
 		return c.SendString("Ping Pong!")
 	})
 
-	app.Get("/sms/:phoneNumber", func(c *fiber.Ctx) error {
-		phoneNumber := c.Params("phoneNumber")
+	app.Post("/sms", func(c *fiber.Ctx) error {
 		sms := new(Sms)
 		if err := c.BodyParser(sms); err != nil {
 			return err
@@ -36,7 +36,7 @@ func main() {
 		})
 
 		params := &openapi.CreateMessageParams{}
-		params.SetTo(phoneNumber)
+		params.SetTo(sms.To)
 		params.SetFrom(os.Getenv("TWILIO_PHONE_NUMBER"))
 		params.SetBody(sms.Body)
 
@@ -45,7 +45,13 @@ func main() {
 			fmt.Println(err.Error())
 			err = nil
 		}
-		return c.Status(200).SendString("Message Sid: " + *resp.Sid)
+
+		result := map[string]interface{}{
+			"status":      "success",
+			"message":     "message sent successfully",
+			"message sid": *resp.Sid,
+		}
+		return c.Status(200).JSON(result)
 	})
 
 	app.Listen(":3006")
